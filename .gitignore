@@ -1,2 +1,4 @@
-# ignore testing folder
+# testing folder
 test/
+# makefile
+makefile
