@@ -5,8 +5,8 @@
 #include <string.h>
 #include <sys/stat.h>
 
-// The rooms (from Clue!)
-const char* rooms[] = {"Ballroom", "Billard Room", "Conservatory", "Dining Room", "Hall", "Kitchen", "Library", "Lounge", "Study", "Bathroom"};
+// The rooms
+const char* rooms[] = {"Ballroom", "Basement", "Attic", "Garage", "Hall", "Kitchen", "Library", "Lounge", "Study", "Bathroom"};
 
 int main(){
 
@@ -42,6 +42,9 @@ int main(){
 		perror("Error creating directory!");
 		return(-1);
 	}
+
+	
+
 	/*
 	// Create all connections in graph
 	while (IsGraphFull() == false){
@@ -51,6 +54,8 @@ int main(){
 
 	// Cleanup memory allocation
 	free(directory);
+	free(firstDir);
+	free(strPid);
 
 	return 0;
 }
