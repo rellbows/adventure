@@ -8,6 +8,16 @@
 // The rooms
 const char* rooms[] = {"Ballroom", "Basement", "Attic", "Garage", "Hall", "Kitchen", "Library", "Lounge", "Study", "Bathroom"};
 
+enum roomType{ START_ROOM, END_ROOM, MID_ROOM};
+
+// holds the name/type/outbound connections for a room
+struct room{
+	char name[9];    // 8 char length + null term
+	enum roomType type;
+	char outboundConnect[6][9];    // max connect of 6 + ea. entry 8 chars
+	int outboundCount;    // helps keep count of number of connections	
+};
+
 int main(){
 
 	// Variable declaration
@@ -19,7 +29,9 @@ int main(){
 	strcpy(firstDir, "ellisry.rooms.");	
 	char* strPid = malloc(11 * sizeof(char));    // Holds pid as string
 	memset(strPid, '\0', 11);    // Clearing...
-	int dirResult = 0;
+	int dirResult = 0;    // holds status of directory creation
+	struct room roomList[7];    // Holds the 7 rooms
+
 
 	// Get PID for process
 	pid = getpid();
@@ -43,7 +55,13 @@ int main(){
 		return(-1);
 	}
 
-	
+	// Testing
+	struct room test;
+	strcpy(test.name, rooms[0]);    // Should be Ballroom
+	test.type = START_ROOM;
+	strcpy(test.outboundConnect[0], rooms[1]);    // Should be Basement
+	test.outboundCount = 1;
+	printf("%s, %d, %s, %d\n", test.name, test.type, test.outboundConnect[0], test.outboundCount);
 
 	/*
 	// Create all connections in graph
