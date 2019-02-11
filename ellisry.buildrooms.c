@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 
 // The rooms
 const char* rooms[] = {"Ballroom", "Basement", "Attic", "Garage", "Hall", "Kitchen", "Library", "Lounge", "Study", "Bathroom"};
@@ -18,6 +19,10 @@ struct room{
 	int outboundCount;    // helps keep count of number of connections	
 };
 
+// function headers
+int randomInt(int max, int min);
+void randomRoomList(struct room roomList[], size_t len);
+
 int main(){
 
 	// Variable declaration
@@ -31,7 +36,10 @@ int main(){
 	memset(strPid, '\0', 11);    // Clearing...
 	int dirResult = 0;    // holds status of directory creation
 	struct room roomList[7];    // Holds the 7 rooms
+	
 
+	// Set the starting point for rand()
+	srand((unsigned int) time(NULL));
 
 	// Get PID for process
 	pid = getpid();
@@ -62,6 +70,17 @@ int main(){
 	strcpy(test.outboundConnect[0], rooms[1]);    // Should be Basement
 	test.outboundCount = 1;
 	printf("%s, %d, %s, %d\n", test.name, test.type, test.outboundConnect[0], test.outboundCount);
+	memcpy(&roomList[0], &test, sizeof(roomList[0]));
+	printf("%s, %d, %s, %d\n", roomList[0].name, roomList[0].type, roomList[0].outboundConnect[0], roomList[0].outboundCount);	
+
+	// Get initialize randomized list of 7 rooms
+	randomRoomList(roomList, sizeof(roomList) / sizeof(*roomList));
+	
+	// Testing
+	int i = 0;
+	for(i; i < (sizeof(roomList)/sizeof(*roomList)); i++){
+		printf("%s %d\n", roomList[i].name, roomList[i].type);
+	}
 
 	/*
 	// Create all connections in graph
@@ -76,6 +95,45 @@ int main(){
 	free(strPid);
 
 	return 0;
+}
+
+// Returns a random integer
+int randomInt(int min, int max){
+	int randomInt = 0;
+	randomInt = (rand() % (max - min)) + min;
+	return randomInt;
+}
+
+// Initializes the list of random rooms with names and a type
+void randomRoomList(struct room roomList[], size_t len){
+	// local vars
+	int i = 0;    // traverse thru random room list
+	int randInt = 0;    // holds random num
+	// keeps track of which rooms have been assigned; 0 = not, 1 = assigned
+	int takenList[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+	// loop to move thru room list and assign out rooms
+	for(i; i < len; i++){
+		randInt = randomInt(0, 10);
+		while(takenList[randInt] != 0){
+			randInt = randomInt(0, 10);
+		}
+
+		// update taken list and copy
+		takenList[randInt] = 1;	
+		strcpy(roomList[i].name, rooms[randInt]);
+	
+		// assign out type
+		if(i == 0){
+			roomList[i].type = START_ROOM;
+		}
+		else if(i == (len - 1)){
+			roomList[i].type = END_ROOM;
+		}
+		else{
+			roomList[i].type = MID_ROOM;
+		}
+	}
 }
 
 /*
