@@ -10,6 +10,7 @@
 const char* rooms[] = {"Ballroom", "Basement", "Attic", "Garage", "Hall", "Kitchen", "Library", "Lounge", "Study", "Bathroom"};
 
 enum roomType{ START_ROOM, END_ROOM, MID_ROOM};
+typedef enum { false, true } bool;
 
 // holds the name/type/outbound connections for a room
 struct room{
@@ -19,9 +20,15 @@ struct room{
 	int outboundCount;    // helps keep count of number of connections	
 };
 
-// function headers
+// function prototypes 
 int randomInt(int max, int min);
 void randomRoomList(struct room roomList[], size_t len);
+bool IsGraphFull(struct room roomList[], size_t len);
+void AddRandomConnection(struct room roomList[], size_t len);
+struct room GetRandomRoom(struct room roomList[], size_t len);
+bool CanAddConnectionFrom(struct room x);
+bool ConnectionAlreadyExists(struct room x, struct room y);
+void ConnectRoom(struct room roomList[], int roomX, int roomY);
 
 int main(){
 
@@ -63,16 +70,6 @@ int main(){
 		return(-1);
 	}
 
-	// Testing
-	struct room test;
-	strcpy(test.name, rooms[0]);    // Should be Ballroom
-	test.type = START_ROOM;
-	strcpy(test.outboundConnect[0], rooms[1]);    // Should be Basement
-	test.outboundCount = 1;
-	printf("%s, %d, %s, %d\n", test.name, test.type, test.outboundConnect[0], test.outboundCount);
-	memcpy(&roomList[0], &test, sizeof(roomList[0]));
-	printf("%s, %d, %s, %d\n", roomList[0].name, roomList[0].type, roomList[0].outboundConnect[0], roomList[0].outboundCount);	
-
 	// Get initialize randomized list of 7 rooms
 	randomRoomList(roomList, sizeof(roomList) / sizeof(*roomList));
 	
@@ -82,12 +79,24 @@ int main(){
 		printf("%s %d\n", roomList[i].name, roomList[i].type);
 	}
 
-	/*
 	// Create all connections in graph
-	while (IsGraphFull() == false){
-		AddRandomConnection();
+	while(IsGraphFull(roomList, sizeof(roomList) / sizeof(*roomList)) == false){
+		AddRandomConnection(roomList, sizeof(roomList) / sizeof(*roomList));
 	}
-	*/
+
+	// Testing
+	int j = 0;
+	for(j; j < (sizeof(roomList)/sizeof(*roomList)); j++){
+		printf("Room: %s Type: %d\n", roomList[j].name, roomList[j].type);
+		printf("Room Connections:\n");
+		int k = 0;
+		for(k; k < roomList[j].outboundCount; k++){
+			printf("%s\n", roomList[j].outboundConnect[k]);
+		}
+		printf("\n\n");
+	}
+
+
 
 	// Cleanup memory allocation
 	free(directory);
@@ -118,11 +127,13 @@ void randomRoomList(struct room roomList[], size_t len){
 		while(takenList[randInt] != 0){
 			randInt = randomInt(0, 10);
 		}
-
 		// update taken list and copy
 		takenList[randInt] = 1;	
 		strcpy(roomList[i].name, rooms[randInt]);
 	
+		// set connection count
+		roomList[i].outboundCount = 0;
+
 		// assign out type
 		if(i == 0){
 			roomList[i].type = START_ROOM;
@@ -136,50 +147,96 @@ void randomRoomList(struct room roomList[], size_t len){
 	}
 }
 
-/*
 // Returns true if all rooms have 3 to 6 outbound connections
-bool IsGraphFull(){
-	// TODO: need to start
+bool IsGraphFull(struct room roomList[], size_t len){
+	// local var(s)
+	int i = 0;    // iterator thru room list
+
+	// Testing
+	printf("IsGraphFull\n");
+	
+	// iterate thru room list
+	for(i; i < len; i++){
+		if(roomList[i].outboundCount < 3){
+			return false;
+		}
+	}
+	return true;
 }
 
-void AddRandomConnection(){
-	Room A;	// Maybe a struct, maybe global arrays of ints
-	Room B;
+void AddRandomConnection(struct room roomList[], size_t len){
+	
+	int roomA;    // hold index of two rooms
+	int roomB;
+
+	// Testing
+	printf("AddRandomConnection\n");
 
 	while(true){
-		A = GetRandomRoom();
+		roomA = randomInt(0, 7); 
 
-		if(CanAddConnectionFrom(A) == true){
+		if(CanAddConnectionFrom(roomList[roomA]) == true){
 			break;
 		}
 	}
 
 	do{
-		B = GetRandomRoom();
+		roomB = randomInt(0, 7); 
 	}
-	while(CanAddConnectionFrom(B) == false || IsSameRoom(A, B) == true || ConnectionAlreadyExists(A, B) == true);
+	while(CanAddConnectionFrom(roomList[roomB]) == false || roomA == roomB || ConnectionAlreadyExists(roomList[roomA], roomList[roomB]) == true);
 
-	ConnectRoom(A, B);	// TODO: Add this connection to the real
-	ConnectRoom(B, A);	// variable b/c this A and B will be destoryed
+	ConnectRoom(roomList, roomA, roomB);	// TODO: Add this connection to the real
+	ConnectRoom(roomList, roomB, roomA);	// variable b/c this A and B will be destoryed
 }
 
-// Returns a random Room, does NOT validate if connection can be added
-Room GetRandomRoom(){
-	// TODO: complete....
+// Returns true if a connection can be added from room x (< 6 connections) false otherwise
+bool CanAddConnectionFrom(struct room x){
+	
+	// Testing
+	printf("CanAddConnectionFrom\n");
+
+	if(x.outboundCount < 6){
+		return true;
+	}
+	return false;
 }
 
 // Returns true if a connection from Foom x to Room y already exists, false
 // otherwise
-bool ConnectionAlreadyExists(x, y){
-	// TODO: complete...
+bool ConnectionAlreadyExists(struct room x, struct room y){
+	// local var
+	int i = 0;
+
+	// Testing
+	printf("ConnectionAlreadyExists\n");
+	
+	// iterate thru connection list of room x for room y
+	// only need to do this 1 direction because connections
+	// are made both ways
+	for(i; i < x.outboundCount; i++){
+		if(strcmp(x.outboundConnect[i], y.name) == 0){
+			return true;
+		}
+	}
+	return false;
 }
 
 // Connects Rooms x and y together, does not check if this connection is valid
-void ConnectRoom(Room x, Room y){
-	// TODO: complete...
-}
+void ConnectRoom(struct room roomList[], int roomX, int roomY){
+	// local var
+	int currentConnects = roomList[roomX].outboundCount;
+	char* roomYName;
+	memset(roomYName, '\0', sizeof(roomList[roomY].name));
+	
+	// Testing
+	printf("ConnectRoom\n");
 
-// Returns true if Rooms x and y are the same Room, false otherwise
-bool IsSameRoom(Room x, Room y){
-	// TODO: complete...
-}*/
+	// Get room Y name
+	strcpy(roomYName, roomList[roomY].name);
+
+	// Add room Y name to room X connection list
+	strcpy(roomList[roomX].outboundConnect[currentConnects], roomYName);
+
+	// Increment count for that room
+	roomList[roomX].outboundCount = currentConnects + 1;
+}
