@@ -21,6 +21,7 @@ struct room{
 };
 
 // function prototypes 
+int writeToFiles(struct room roomList[], size_t len, char* dirName);
 int randomInt(int max, int min);
 void randomRoomList(struct room roomList[], size_t len);
 bool IsGraphFull(struct room roomList[], size_t len);
@@ -50,17 +51,11 @@ int main(){
 
 	// Get PID for process
 	pid = getpid();
-	// Testing
-	printf("%d\n", pid);
 	// Convert PID from int to string
 	snprintf(strPid, 11, "%d", pid);
-	// Testing
-	printf("%s\n", strPid);
 	
 	// Make string for <username>.rooms.<pid> directory
 	snprintf(directory, 25, "%s%s", firstDir, strPid);
-	// Testing
-	printf("%s\n", directory);
 
 	// Make actual directory
 	dirResult = mkdir(directory, 0755);
@@ -72,36 +67,69 @@ int main(){
 
 	// Get initialize randomized list of 7 rooms
 	randomRoomList(roomList, sizeof(roomList) / sizeof(*roomList));
-	
-	// Testing
-	int i = 0;
-	for(i; i < (sizeof(roomList)/sizeof(*roomList)); i++){
-		printf("%s %d\n", roomList[i].name, roomList[i].type);
-	}
 
 	// Create all connections in graph
 	while(IsGraphFull(roomList, sizeof(roomList) / sizeof(*roomList)) == false){
 		AddRandomConnection(roomList, sizeof(roomList) / sizeof(*roomList));
 	}
 
-	// Testing
-	int j = 0;
-	for(j; j < (sizeof(roomList)/sizeof(*roomList)); j++){
-		printf("Room: %s Type: %d\n", roomList[j].name, roomList[j].type);
-		printf("Room Connections:\n");
-		int k = 0;
-		for(k; k < roomList[j].outboundCount; k++){
-			printf("%s\n", roomList[j].outboundConnect[k]);
-		}
-		printf("\n\n");
+
+	// Write data to files
+	if(writeToFiles(roomList, (sizeof(roomList) / sizeof(*roomList)), directory) == -1){
+		perror("Error writing room data to files.");
+		return -1;
 	}
-
-
 
 	// Cleanup memory allocation
 	free(directory);
 	free(firstDir);
 	free(strPid);
+
+	return 0;
+}
+
+// Writes the contents of the randomized room list to files
+int writeToFiles(struct room roomList[], size_t len, char* dirName){
+	// local var
+	FILE* outputFile;
+	char* outputFileName = malloc(40 * sizeof(char));
+	memset(outputFileName, '\0', 40);
+	int i = 0;    // traverses room list
+	int j = 0;    // traverses connection of ea room
+
+	// iterate thru room list and output data to individual files
+	for(i; i < len; i++){
+		snprintf(outputFileName, 40, "%s/%s_room", dirName, roomList[i].name);
+		// Open up file to write data
+		outputFile = fopen(outputFileName, "w");
+		// Check to ensure file stream created successfully
+		// and print data
+		if(outputFile != NULL){
+			// Write name of ea room
+			fprintf(outputFile, "ROOM NAME: %s\n", roomList[i].name);
+			
+			// Traverse connections of ea room and write
+			for(j = 0; j < roomList[i].outboundCount; j++){
+				fprintf(outputFile, "CONNECTION %d: %s\n", (j + 1), roomList[i].outboundConnect[j]);
+			}
+			
+			// Write type
+			fprintf(outputFile, "ROOM TYPE: ");
+			if(roomList[i].type == 0){
+				fprintf(outputFile, "START_ROOM");
+			}
+			else if(roomList[i].type == 1){
+				fprintf(outputFile, "END_ROOM");
+			}
+			else{
+				fprintf(outputFile, "MID_ROOM");
+			}
+			fprintf(outputFile, "\n");
+		}
+	}
+
+	// cleanup memory allocation
+	free(outputFileName);
 
 	return 0;
 }
@@ -152,9 +180,6 @@ bool IsGraphFull(struct room roomList[], size_t len){
 	// local var(s)
 	int i = 0;    // iterator thru room list
 
-	// Testing
-	printf("IsGraphFull\n");
-	
 	// iterate thru room list
 	for(i; i < len; i++){
 		if(roomList[i].outboundCount < 3){
@@ -168,9 +193,6 @@ void AddRandomConnection(struct room roomList[], size_t len){
 	
 	int roomA;    // hold index of two rooms
 	int roomB;
-
-	// Testing
-	printf("AddRandomConnection\n");
 
 	while(true){
 		roomA = randomInt(0, 7); 
@@ -191,9 +213,6 @@ void AddRandomConnection(struct room roomList[], size_t len){
 
 // Returns true if a connection can be added from room x (< 6 connections) false otherwise
 bool CanAddConnectionFrom(struct room x){
-	
-	// Testing
-	printf("CanAddConnectionFrom\n");
 
 	if(x.outboundCount < 6){
 		return true;
@@ -207,9 +226,6 @@ bool ConnectionAlreadyExists(struct room x, struct room y){
 	// local var
 	int i = 0;
 
-	// Testing
-	printf("ConnectionAlreadyExists\n");
-	
 	// iterate thru connection list of room x for room y
 	// only need to do this 1 direction because connections
 	// are made both ways
@@ -225,11 +241,8 @@ bool ConnectionAlreadyExists(struct room x, struct room y){
 void ConnectRoom(struct room roomList[], int roomX, int roomY){
 	// local var
 	int currentConnects = roomList[roomX].outboundCount;
-	char* roomYName;
+	char* roomYName = malloc(9 * sizeof(char));
 	memset(roomYName, '\0', sizeof(roomList[roomY].name));
-	
-	// Testing
-	printf("ConnectRoom\n");
 
 	// Get room Y name
 	strcpy(roomYName, roomList[roomY].name);
@@ -239,4 +252,7 @@ void ConnectRoom(struct room roomList[], int roomX, int roomY){
 
 	// Increment count for that room
 	roomList[roomX].outboundCount = currentConnects + 1;
+
+	// free up allocated mem
+	free(roomYName);
 }
