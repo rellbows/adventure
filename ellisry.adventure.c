@@ -18,11 +18,10 @@ struct room{
 	int outboundCount;    // helps keep count of number of connections	
 };
 
-
-
 // F(x) prototypes
 void getDir(char* newestDir, size_t len);
 void getFile(char* newestDirName, struct room roomList[], size_t len);
+void loadData(char* fullPath, struct room roomList[], size_t len, int fileIndex);
 
 int main(){
 	// Var for getting sub dir
@@ -45,8 +44,19 @@ int main(){
 	getDir(newestDirName, sizeof(newestDirName));
 
 	// Populate random room list from files in sub dir
+	getFile(newestDirName, roomList, listSize);	
 	
-	 
+	// Testing
+	int i = 0;
+	for(i; i < listSize; i++){
+		printf("%s\n", roomList[i].name);
+		int j = 0;
+		for(j; j < roomList[i].outboundCount; j++){
+			printf("%s\n", roomList[i].outboundConnect[j]);
+		}
+		printf("%d\n\n", roomList[i].type);
+	}
+ 
 	// Loop for game here...
 	/*	
 	while()
@@ -87,4 +97,87 @@ void getDir(char *newestDirName, size_t len){
 	}
 	
 	closedir(dirToCheck);
+}
+
+// Traverses thru the newest 'ellisry.rooms.' sub dir and calls on the 
+// another function to load the room data into the list
+void getFile(char* newestDirName, struct room roomList[], size_t len){
+	// Local vars
+	char currentFile[14]; // 8 max room name + '_room' + 1
+	char fullPath[273]; // max sub dir + max filename + 2X '/' + '.'+ 1
+	int fileIndex = 0; // keep track of number of files
+	
+	DIR* dirToCheck = opendir(newestDirName); // Sub dir we want to check
+	struct dirent *fileInDir;
+	struct stat dirAttributes; // Holds data about the sub dir
+
+	if(dirToCheck > 0){
+		while((fileInDir = readdir(dirToCheck)) != NULL){
+			if(strstr(fileInDir->d_name, "_room") != NULL){
+				stat(fileInDir->d_name, &dirAttributes); // Get the data
+			
+				memset(currentFile, '\0', sizeof(currentFile));
+				strcpy(currentFile, fileInDir->d_name);
+			
+				// Testing
+				printf("%s\n", currentFile);
+
+				// Get full path in prep for passing to
+				// our function that will load the data
+				snprintf(fullPath, sizeof(fullPath), "./%s/%s", newestDirName, currentFile);
+
+				// Testing
+				printf("%s\n", fullPath);
+
+				// Call our function to pull the data
+				// from file and load into room list
+				loadData(fullPath, roomList, len, fileIndex);
+
+				// Increase file Index
+				fileIndex++;
+			}	
+		}
+	}
+}
+
+// Load data from specified file into the room list struct
+void loadData(char* fullPath, struct room roomList[], size_t len, int fileIndex){
+	// Local vars
+	FILE* inputFile = fopen(fullPath, "r");
+	char buffer[100]; // Should leave plenty of room for each line
+	int count = 0; // Keep track of # of connections
+	int i = 0; // Keep track line index
+
+	// Check to ensure file opened sucessfully
+	if(inputFile == NULL){
+		perror("Error opening file");
+		exit(1);
+	}
+
+	while(fscanf(inputFile, "%*[^:]: %s", buffer) == 1){
+		if(i == 0){
+			strcpy(roomList[fileIndex].name, buffer);
+		}
+		else{
+			if(strcmp(buffer, "START_ROOM") == 0){
+				roomList[fileIndex].type = 0;
+			}
+			else if(strcmp(buffer, "MID_ROOM") == 0){
+				roomList[fileIndex].type = 2;
+			}
+			else if(strcmp(buffer, "END_ROOM") == 0){
+				roomList[fileIndex].type = 1;
+			}
+			else{
+				strcpy(roomList[fileIndex].outboundConnect[count], buffer);
+				roomList[fileIndex].outboundCount = ++count;
+			}
+		}
+		
+		// Increase line index
+		i++;
+	}
+	
+	// Close out stream
+	fclose(inputFile);
 }
