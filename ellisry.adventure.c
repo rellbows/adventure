@@ -22,6 +22,8 @@ struct room{
 void getDir(char* newestDir, size_t len);
 void getFile(char* newestDirName, struct room roomList[], size_t len);
 void loadData(char* fullPath, struct room roomList[], size_t len, int fileIndex);
+int findStartRoom(struct room roomList[], size_t len);
+int checkRoomList(char* userInput, struct room roomList[], size_t len);
 
 int main(){
 	// Var for getting sub dir
@@ -32,20 +34,20 @@ int main(){
 	struct room roomList[7]; // Holds the 7 rooms
 	size_t listSize = (sizeof(roomList) / sizeof(*roomList));	
 
-	/*
 	// Vars for game
 	int roomCount = 0; // Holds num of rooms player visits
-	char* roomHistory[9]; // Holds history of rooms entered
-	char currentRoom[9];
-	char* userInput;	
-	*/
+	int currentRoomIndex = 0; // Holds index of current room
+	char roomHistory[100][9]; // Holds history of rooms entered
+	char* userInput = NULL;
+	int charsEntered = -1;
+	size_t inputSize = 0;	
 
 	// Get most recent 'ellisry.rooms.' sub dir
 	getDir(newestDirName, sizeof(newestDirName));
 
 	// Populate random room list from files in sub dir
 	getFile(newestDirName, roomList, listSize);	
-	
+
 	// Testing
 	int i = 0;
 	for(i; i < listSize; i++){
@@ -56,11 +58,33 @@ int main(){
 		}
 		printf("%d\n\n", roomList[i].type);
 	}
- 
+
+	currentRoomIndex = findStartRoom(roomList, listSize);
+	
+	// Testing
+	printf("%d\n", currentRoomIndex);
+
 	// Loop for game here...
-	/*	
-	while()
-	*/
+	while(roomList[currentRoomIndex].type != 1){
+		// Display current room and connections
+		printf("CURRENT LOCATION: %s\n", roomList[currentRoomIndex].name);
+		printf("POSSIBLE CONNECTIONS: ");
+		int k = 0;
+		for(k; k < roomList[currentRoomIndex].outboundCount; k++){
+			printf("%s", roomList[currentRoomIndex].outboundConnect[k]);
+			if(k < (roomList[currentRoomIndex].outboundCount - 1)){
+				printf(", ");
+			}
+			else{
+				printf(".\n");
+			}
+		}
+		
+		// Get input
+		printf("WHERE TO? >");
+		charsEntered = getline(&userInput, &inputSize, stdin);
+		userInput[charsEntered - 1] = '\0';
+	}
 
 	// Clean up memory allocated
 	free(newestDirName);
@@ -180,4 +204,41 @@ void loadData(char* fullPath, struct room roomList[], size_t len, int fileIndex)
 	
 	// Close out stream
 	fclose(inputFile);
+}
+
+int findStartRoom(struct room roomList[], size_t len){
+	// Local var
+	int i = 0;
+
+	for(i; i < len; i++){
+		if(roomList[i].type == 0){
+			return i;
+		}
+	}
+}
+
+int checkOutboundConnect(char* userInput, struct room currentRoom){
+	// Local var
+	int i = 0;
+
+	for(i; i < currentRoom.outboundCount; i++){
+		if(strcmp(userInput, currentRoom.outboundConnect[i]) == 0){
+			return 0;
+		}
+	}
+
+	return -1;
+}
+
+int checkRoomList(char* userInput, struct room roomList[], size_t len){
+	// Local var
+	int i = 0;
+
+	for(i; i < len; i++){
+		if(strcmp(userInput, roomList[i].name) == 0){
+			return i; // Index of the matching room
+		}
+	}
+
+	return -1; // Not a room
 }
