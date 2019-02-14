@@ -108,6 +108,19 @@ int main(){
 		} while(connectionFlag == -1 || roomFlag == -1);
 	}
 
+	// Get final room
+	memset(roomHistory[roomCount], '\0', 0);
+	strcpy(roomHistory[roomCount], roomList[currentRoomIndex].name);
+	
+	// Print game stats
+	printf("YOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n");
+	printf("YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS:\n", roomCount);
+	// Loop for rooms
+	int j = 0;
+	for(j; j <= roomCount; j++){
+		printf("%s\n", roomHistory[j]);
+	}
+
 	// Clean up memory allocated
 	free(newestDirName);
 	free(userInput);
@@ -185,6 +198,8 @@ void getFile(char* newestDirName, struct room roomList[], size_t len){
 			}	
 		}
 	}
+
+	closedir(dirToCheck);
 }
 
 // Load data from specified file into the room list struct
