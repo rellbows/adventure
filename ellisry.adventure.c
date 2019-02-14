@@ -1,6 +1,8 @@
 // Simple script to play adventure game
 // Author: Ryan E
 // Class: OS 344 
+// Citation: Used the below link + TLPI (chap. 29/30) for reference with multi-threading
+// https://www.geeksforgeeks.org/mutex-lock-for-linux-thread-synchronization/
 
 #include <stdlib.h>
 #include <stdio.h>
