@@ -23,6 +23,7 @@ void getDir(char* newestDir, size_t len);
 void getFile(char* newestDirName, struct room roomList[], size_t len);
 void loadData(char* fullPath, struct room roomList[], size_t len, int fileIndex);
 int findStartRoom(struct room roomList[], size_t len);
+int checkOutboundConnect(char* userInput, struct room currentRoom);
 int checkRoomList(char* userInput, struct room roomList[], size_t len);
 
 int main(){
@@ -37,6 +38,8 @@ int main(){
 	// Vars for game
 	int roomCount = 0; // Holds num of rooms player visits
 	int currentRoomIndex = 0; // Holds index of current room
+	int connectionFlag = 0; // Holds status of check to ensure connection
+	int roomFlag = 0; // Holds status of check to ensure valid room. Holds index of room if valid
 	char roomHistory[100][9]; // Holds history of rooms entered
 	char* userInput = NULL;
 	int charsEntered = -1;
@@ -66,28 +69,48 @@ int main(){
 
 	// Loop for game here...
 	while(roomList[currentRoomIndex].type != 1){
-		// Display current room and connections
-		printf("CURRENT LOCATION: %s\n", roomList[currentRoomIndex].name);
-		printf("POSSIBLE CONNECTIONS: ");
-		int k = 0;
-		for(k; k < roomList[currentRoomIndex].outboundCount; k++){
-			printf("%s", roomList[currentRoomIndex].outboundConnect[k]);
-			if(k < (roomList[currentRoomIndex].outboundCount - 1)){
-				printf(", ");
+		do{
+			// Display current room and connections
+			printf("CURRENT LOCATION: %s\n", roomList[currentRoomIndex].name);
+			printf("POSSIBLE CONNECTIONS: ");
+			int k = 0;
+			for(k; k < roomList[currentRoomIndex].outboundCount; k++){
+				printf("%s", roomList[currentRoomIndex].outboundConnect[k]);
+				if(k < (roomList[currentRoomIndex].outboundCount - 1)){
+					printf(", ");
+				}
+				else{
+					printf(".\n");
+				}
 			}
-			else{
-				printf(".\n");
+	
+			// Get input
+			printf("WHERE TO? >");
+			charsEntered = getline(&userInput, &inputSize, stdin);
+			printf("\n");
+			userInput[charsEntered - 1] = '\0'; // Change newline to null
+
+			// Check user input
+			connectionFlag = checkOutboundConnect(userInput, roomList[currentRoomIndex]);
+			roomFlag = checkRoomList(userInput, roomList, listSize);
+
+			// Throw error message if invalid
+			if(connectionFlag == -1 || roomFlag == -1){
+				printf("HUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN.\n\n");
 			}
-		}
-		
-		// Get input
-		printf("WHERE TO? >");
-		charsEntered = getline(&userInput, &inputSize, stdin);
-		userInput[charsEntered - 1] = '\0';
+			else{ // Otherwise, correct room!
+				memset(roomHistory[roomCount], '\0', 9);
+				strcpy(roomHistory[roomCount], roomList[currentRoomIndex].name);
+				roomCount++;
+				currentRoomIndex = roomFlag;
+				
+			}
+		} while(connectionFlag == -1 || roomFlag == -1);
 	}
 
 	// Clean up memory allocated
 	free(newestDirName);
+	free(userInput);
 
 	return 0;
 }
