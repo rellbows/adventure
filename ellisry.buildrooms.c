@@ -1,4 +1,6 @@
-// TODO: header here...
+// Script to create rooms for adventure game.
+// Author: Ryan E
+// Class: OS CS344 
 
 #include <stdio.h>
 #include <stdlib.h>

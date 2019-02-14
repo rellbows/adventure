@@ -1,4 +1,6 @@
-// TODO: header here...
+// Simple script to play adventure game
+// Author: Ryan E
+// Class: OS 344 
 
 #include <stdlib.h>
 #include <stdio.h>
