@@ -4,9 +4,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <dirent.h>
+#include <pthread.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
+
+// For thread mgmt
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER; 
 
 enum roomType{ START_ROOM, END_ROOM, MID_ROOM};
 
@@ -25,6 +30,8 @@ void loadData(char* fullPath, struct room roomList[], size_t len, int fileIndex)
 int findStartRoom(struct room roomList[], size_t len);
 int checkOutboundConnect(char* userInput, struct room currentRoom);
 int checkRoomList(char* userInput, struct room roomList[], size_t len);
+void* writeTime(void* arg);
+void* readTime(void* arg);
 
 int main(){
 	// Var for getting sub dir
@@ -45,12 +52,19 @@ int main(){
 	int charsEntered = -1;
 	size_t inputSize = 0;	
 
+	// For thread mgmt
+	pthread_t t1, t2;
+	int status;
+
+
+
 	// Get most recent 'ellisry.rooms.' sub dir
 	getDir(newestDirName, sizeof(newestDirName));
 
 	// Populate random room list from files in sub dir
 	getFile(newestDirName, roomList, listSize);	
 
+	/*
 	// Testing
 	int i = 0;
 	for(i; i < listSize; i++){
@@ -61,11 +75,14 @@ int main(){
 		}
 		printf("%d\n\n", roomList[i].type);
 	}
+	*/
 
 	currentRoomIndex = findStartRoom(roomList, listSize);
 	
+	/*
 	// Testing
 	printf("%d\n", currentRoomIndex);
+	*/
 
 	// Loop for game here...
 	while(roomList[currentRoomIndex].type != 1){
@@ -94,8 +111,41 @@ int main(){
 			connectionFlag = checkOutboundConnect(userInput, roomList[currentRoomIndex]);
 			roomFlag = checkRoomList(userInput, roomList, listSize);
 
+			// Get time
+			if(strcmp(userInput, "time") == 0){
+				// Make 1st thread
+				status = pthread_create(&t1, NULL, writeTime, NULL);
+				if(status != 0){
+					perror("Error making thread");
+					exit(1);
+				}
+				// Make 2nd thread
+				status = pthread_create(&t2, NULL, readTime, NULL);
+				if(status != 0){
+					perror("Error making thread");
+					exit(1);
+				}
+
+				status = pthread_join(t1, NULL);
+				if(status != 0){
+					perror("Error joining");
+					exit(1);
+				}
+
+				status = pthread_join(t2, NULL);
+				if(status != 0){
+					perror("Error joining");
+					exit(1);
+				}
+			
+
+				// Cleanup thread mgmt
+				pthread_mutex_destroy(&lock);
+
+	
+			}
 			// Throw error message if invalid
-			if(connectionFlag == -1 || roomFlag == -1){
+			else if(connectionFlag == -1 || roomFlag == -1){
 				printf("HUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN.\n\n");
 			}
 			else{ // Otherwise, correct room!
@@ -178,16 +228,20 @@ void getFile(char* newestDirName, struct room roomList[], size_t len){
 			
 				memset(currentFile, '\0', sizeof(currentFile));
 				strcpy(currentFile, fileInDir->d_name);
-			
+		
+				/*	
 				// Testing
 				printf("%s\n", currentFile);
-
+				*/
+	
 				// Get full path in prep for passing to
 				// our function that will load the data
 				snprintf(fullPath, sizeof(fullPath), "./%s/%s", newestDirName, currentFile);
 
+				/*
 				// Testing
 				printf("%s\n", fullPath);
+				*/
 
 				// Call our function to pull the data
 				// from file and load into room list
@@ -244,6 +298,7 @@ void loadData(char* fullPath, struct room roomList[], size_t len, int fileIndex)
 	fclose(inputFile);
 }
 
+// Finds the room gameplay will start in
 int findStartRoom(struct room roomList[], size_t len){
 	// Local var
 	int i = 0;
@@ -255,6 +310,7 @@ int findStartRoom(struct room roomList[], size_t len){
 	}
 }
 
+// Checks to ensure room user entered is connected to current room
 int checkOutboundConnect(char* userInput, struct room currentRoom){
 	// Local var
 	int i = 0;
@@ -268,6 +324,8 @@ int checkOutboundConnect(char* userInput, struct room currentRoom){
 	return -1;
 }
 
+// Checks to ensure room user entered is a room, and if so returns
+// the index in roomList for that room
 int checkRoomList(char* userInput, struct room roomList[], size_t len){
 	// Local var
 	int i = 0;
@@ -279,4 +337,77 @@ int checkRoomList(char* userInput, struct room roomList[], size_t len){
 	}
 
 	return -1; // Not a room
+}
+
+// Writes the current time to a file
+// Citation: Used below link for reference with strftime
+// https://linux.die.net/man/3/strftime
+void* writeTime(void *arg){
+	// Lock access so readTime can't start
+	pthread_mutex_lock(&lock);
+
+	// Local vars
+	FILE* dateFile;
+	char dateString[200];
+	time_t t;
+	struct tm *tmp;
+
+	// Get time
+	t = time(NULL);
+	// Converts the big messy time into struct matching my timezone
+	tmp = localtime(&t);
+
+	// Check to make sure pop of struct success
+	if(tmp == NULL){
+		perror("Error getting local time.");
+		exit(1);
+	}
+
+	// Turn that struct into string (check while calling)
+	if(strftime(dateString, sizeof(dateString), "%I:%M%p, %A, %B, %d, %Y\n", tmp) == 0){
+		perror("Error printing time out.");
+		exit(1);
+}
+
+	// Open up file for writing
+	dateFile = fopen("currentTime.txt", "w");
+
+	// Check to ensure file opened successfully
+	if(dateFile == NULL){
+		perror("Error creating \"currentTime.txt\".");
+		exit(1);
+	}
+
+	// Write time to file
+	fputs(dateString, dateFile);
+
+	fclose(dateFile);
+
+	// Unlock so readTime can access
+	pthread_mutex_unlock(&lock);
+
+	return NULL;
+}
+
+// Read time from file
+void* readTime(void* arg){
+	// Attempt to lock; will get blocked by writeFile - if open 
+	pthread_mutex_lock(&lock);
+
+	// Local vars
+	FILE* dateFile;
+	char dateString[200];
+
+	dateFile = fopen("currentTime.txt", "r");
+
+	fgets(dateString, 200, dateFile);
+
+	fclose(dateFile);
+
+	printf("%s\n", dateString);
+
+	// Unlock
+	pthread_mutex_unlock(&lock);
+
+	return NULL;
 }
